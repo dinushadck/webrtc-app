@@ -19,7 +19,7 @@ export function UILoaded() {
 
   let localStream;
   let customStream;
-  let pc;
+  let pc = null;
   const offerOptions = {
     offerToReceiveAudio: 1,
     offerToReceiveVideo: 1
@@ -28,7 +28,7 @@ export function UILoaded() {
 
   //==================WEB SOCKET===================//
 
-  let socket = new WebSocket("ws://192.168.1.5:4000", "echo-protocol");
+  let socket = new WebSocket("wss://192.168.1.5:4000", "echo-protocol");
   socket.onopen = function(e) {
     //alert("[open] Connection established");
   };
@@ -63,61 +63,45 @@ export function UILoaded() {
     alert(`[message] Data received from server: ${event.data}`);
   };
 
-  async function getCustomVideoStream() {
-    let resp = await fetch("./jellyfish-3-mbps-hd-h264.mkv");
-
-    let reader = resp.body.getReader();
-    return new ReadableStream({
-      start(controller) {
-        return pump();
-        function pump() {
-          return reader.read().then(({ done, value }) => {
-            // When no more data needs to be consumed, close the stream
-            if (done) {
-              controller.close();
-              return;
-            }
-            // Enqueue the next data chunk into our target stream
-            controller.enqueue(value);
-            return pump();
-          });
-        }
-      }
-    });
-  }
-
   async function addCustomVideo() {
-    //customVideo.srcObject = new MediaStream();
+    let customStream = customVideo.captureStream();
+    customStream.getTracks().forEach(track => pc.addTrack(track, customStream));
+    const offer = await pc.createOffer(offerOptions);
+    await pc.setLocalDescription(offer);
+    sendOfferViaSocket(offer.sdp);
     //customStream = reader;
   }
 
   let answerCall = async function(desc) {
-    const videoTracks = localStream.getVideoTracks();
-    const audioTracks = localStream.getAudioTracks();
-    if (videoTracks.length > 0) {
-      console.log(`Using video device: ${videoTracks[0].label}`);
-    }
-    if (audioTracks.length > 0) {
-      console.log(`Using audio device: ${audioTracks[0].label}`);
-    }
-    const configuration = getSelectedSdpSemantics();
-    console.log("RTCPeerConnection configuration:", configuration);
-    pc = new RTCPeerConnection(configuration);
-    console.log("Created remote peer connection object pc");
-    pc.addEventListener("icecandidate", e => onIceCandidate(pc, e));
+    if (pc === null) {
+      const videoTracks = localStream.getVideoTracks();
+      const audioTracks = localStream.getAudioTracks();
+      if (videoTracks.length > 0) {
+        console.log(`Using video device: ${videoTracks[0].label}`);
+      }
+      if (audioTracks.length > 0) {
+        console.log(`Using audio device: ${audioTracks[0].label}`);
+      }
+      const configuration = getSelectedSdpSemantics();
+      console.log("RTCPeerConnection configuration:", configuration);
+      pc = new RTCPeerConnection(configuration);
+      console.log("Created remote peer connection object pc");
+      pc.addEventListener("icecandidate", e => onIceCandidate(pc, e));
 
-    pc.addEventListener("iceconnectionstatechange", e =>
-      onIceStateChange(pc, e)
-    );
-    pc.addEventListener("track", gotRemoteStream);
+      pc.addEventListener("iceconnectionstatechange", e =>
+        onIceStateChange(pc, e)
+      );
+      pc.addEventListener("track", gotRemoteStream);
 
-    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-    console.log("Added local stream to pc");
-    console.log("pc createAnswer start");
-    // Since the 'remote' side has no media stream we need
-    // to pass in the right constraints in order for it to
-    // accept the incoming offer of audio and video.
-    console.log("pc setRemoteDescription start");
+      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+      console.log("Added local stream to pc");
+      console.log("pc createAnswer start");
+      // Since the 'remote' side has no media stream we need
+      // to pass in the right constraints in order for it to
+      // accept the incoming offer of audio and video.
+      console.log("pc setRemoteDescription start");
+    }
+
     try {
       await pc.setRemoteDescription(desc);
       onSetRemoteSuccess(pc);
@@ -177,6 +161,7 @@ export function UILoaded() {
   const localVideo = document.getElementById("localVideo");
   const remoteVideo = document.getElementById("remoteVideo");
   const customVideo = document.getElementById("customVideo");
+  const receiveVideo = document.getElementById("receiveVideo");
 
   localVideo.addEventListener("loadedmetadata", function() {
     console.log(
@@ -320,6 +305,12 @@ export function UILoaded() {
     if (remoteVideo.srcObject !== e.streams[0]) {
       remoteVideo.srcObject = e.streams[0];
       console.log("pc received remote stream");
+    }
+    if (e.streams.length > 1) {
+      if (receiveVideo.srcObject !== e.streams[1]) {
+        receiveVideo.srcObject = e.streams[1];
+        console.log("pc received remote stream");
+      }
     }
   }
 

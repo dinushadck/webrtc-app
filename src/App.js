@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { UILoaded } from "./webrtc";
+import myVideo from "./test_video_2.mkv";
 
 function App() {
   useEffect(() => {
@@ -19,16 +20,40 @@ function App() {
       </nav>
       <div className="col-lg-12 col-md-12 col-sm-12 col-xs-12">
         <div className="row">
-          <div className="col-lg-4 col-md-4 col-sm-12 col-xs-12">
-            <video id="localVideo" autoPlay playsInline muted></video>
+          <div className="col-lg-3 col-md-3 col-sm-12 col-xs-12">
+            <video
+              id="localVideo"
+              width="320"
+              height="240"
+              autoPlay
+              playsInline
+              muted
+            ></video>
           </div>
-          <div className="col-lg-4 col-md-4 col-sm-12 col-xs-12">
-            <video id="remoteVideo" autoPlay playsInline></video>
+          <div className="col-lg-3 col-md-3 col-sm-12 col-xs-12">
+            <video
+              id="remoteVideo"
+              width="320"
+              height="240"
+              autoPlay
+              playsInline
+            ></video>
           </div>
-          <div className="col-lg-4 col-md-4 col-sm-12 col-xs-12">
+          <div className="col-lg-3 col-md-3 col-sm-12 col-xs-12">
             <video
               id="customVideo"
-              src="./jellyfish-3-mbps-hd-h264.mkv"
+              width="320"
+              height="240"
+              src={myVideo}
+              type="video/mkv"
+              autoPlay
+            ></video>
+          </div>
+          <div className="col-lg-3 col-md-3 col-sm-12 col-xs-12">
+            <video
+              id="receiveVideo"
+              width="320"
+              height="240"
               autoPlay
               playsInline
             ></video>
