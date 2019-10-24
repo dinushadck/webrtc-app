@@ -9,33 +9,65 @@ function App() {
 
   return (
     <div className="row">
-      <nav className="navbar navbar-expand-lg navbar-light bg-light">
+      <nav
+        className="navbar navbar-expand-lg navbar-light"
+        style={{ backgroundColor: "#563d7c" }}
+      >
         <a className="navbar-brand" href="#">
           Web RTC
         </a>
       </nav>
       <div className="col-lg-12 col-md-12 col-sm-12 col-xs-12">
         <div className="row">
-          <div className="col-lg-6 col-md-6 col-sm-12 col-xs-12">
+          <div className="col-lg-4 col-md-4 col-sm-12 col-xs-12">
             <video id="localVideo" autoPlay playsInline muted></video>
           </div>
-          <div className="col-lg-6 col-md-6 col-sm-12 col-xs-12">
+          <div className="col-lg-4 col-md-4 col-sm-12 col-xs-12">
             <video id="remoteVideo" autoPlay playsInline></video>
           </div>
-          <div className="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-            <button id="startButton">Start</button>
-            <button id="callButton">Call</button>
-            <button id="hangupButton">Hang Up</button>
+          <div className="col-lg-4 col-md-4 col-sm-12 col-xs-12">
+            <video
+              id="customVideo"
+              src="./jellyfish-3-mbps-hd-h264.mkv"
+              autoPlay
+              playsInline
+            ></video>
           </div>
           <div className="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-            <span>SDP Semantics:</span>
-            <select id="sdpSemantics">
-              <option selected value="">
-                Default
-              </option>
-              <option value="unified-plan">Unified Plan</option>
-              <option value="plan-b">Plan B</option>
-            </select>
+            <div className="row col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <div className="col-lg-2 col-md-2 col-sm-3 col-xs-3">
+                <lable>My Id : {"   "}</lable>
+                <input id="caller" type="text"></input>
+              </div>
+              <div className="col-lg-2 col-md-2 col-sm-3 col-xs-3">
+                <lable>Callee Id : {"   "}</lable>
+                <input id="callee" type="text"></input>
+              </div>
+              <br />
+              <br />
+              <br />
+              <div className="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                <button id="createSession">Create Session</button>
+              </div>
+            </div>
+            <br />
+            <div className="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <button id="startButton">Start</button> {" - "}
+              <button id="callButton">Call</button> {" - "}
+              <button id="customVideoButton">Send Custom Video</button> {" - "}
+              <button id="hangupButton">Hang Up</button>
+            </div>
+            <br />
+            <div className="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <lable>SDP Semantics: {"   "}</lable>
+              <select id="sdpSemantics">
+                <option selected value="">
+                  Default
+                </option>
+                <option value="unified-plan">Unified Plan</option>
+                <option value="plan-b">Plan B</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
