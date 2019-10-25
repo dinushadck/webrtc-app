@@ -6,6 +6,7 @@ export function UILoaded() {
   const createSessionButton = document.getElementById("createSession");
   const callAudioButton = document.getElementById("callAudioButton");
   const upgradeButton = document.getElementById("upgradeButton");
+  const startUpgradeButton = document.getElementById("startUpgradeButton");
   const caller = document.getElementById("caller");
   const callee = document.getElementById("callee");
   callButton.disabled = true;
@@ -17,6 +18,7 @@ export function UILoaded() {
   createSessionButton.addEventListener("click", createSession);
   callAudioButton.addEventListener("click", callAudio);
   upgradeButton.addEventListener("click", upgradeToVideo);
+  startUpgradeButton.addEventListener("click", startUpgrade);
 
   let callerSessionId = "";
   let callerHandleId = "";
