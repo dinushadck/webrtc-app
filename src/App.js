@@ -84,7 +84,7 @@ function App() {
             </div>
             <br />
             <div className="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <button id="callAudioButton">Audio Call</button> {" - "}
+              <button id="startUpgradeButton">Start</button> {" - "}
               <button id="callAudioButton">Audio Call</button> {" - "}
               <button id="upgradeButton">Upgrade To Video</button>
             </div>
