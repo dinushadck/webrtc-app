@@ -327,6 +327,8 @@ export function UILoaded() {
 
     pc.addEventListener("track", gotRemoteStream);
 
+    pc.addEventListener("negotiationneeded", onNegotiationNeeded, false);
+
     try {
       console.log("pc createOffer start");
       const offer = await pc.createOffer(offerOptions);
@@ -334,6 +336,20 @@ export function UILoaded() {
     } catch (e) {
       onCreateSessionDescriptionError(e);
     }
+  }
+
+  function onNegotiationNeeded() {
+    pc.createOffer()
+      .then(offer => {
+        return pc.setLocalDescription(offer);
+      })
+      .then(() => {
+        let obj = {
+          type: "offer_update",
+          sdp: pc.localDescription
+        };
+        socket.send(JSON.stringify(obj));
+      });
   }
 
   function onCreateSessionDescriptionError(error) {
