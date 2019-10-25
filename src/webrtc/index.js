@@ -95,15 +95,21 @@ export function UILoaded() {
     sendOfferViaSocket(offer.sdp);
   }
 
+  async function startUpgrade() {
+    console.log("Requesting local stream");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: false,
+        audio: true
+      });
+      console.log("Received local stream");
+      localStream = stream;
+    } catch (e) {
+      alert(`getUserMedia() error: ${e.name}`);
+    }
+  }
+
   async function callAudio() {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: false,
-      audio: true
-    });
-    console.log("Received local stream");
-    localStream = stream;
-    console.log("Starting call");
-    startTime = window.performance.now();
     const audioTracks = localStream.getAudioTracks();
 
     if (audioTracks.length > 0) {
@@ -139,6 +145,13 @@ export function UILoaded() {
       const audioTracks = localStream.getAudioTracks();
       if (videoTracks.length > 0) {
         console.log(`Using video device: ${videoTracks[0].label}`);
+      } else {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true
+        });
+        console.log("Received local stream");
+        localVideo.srcObject = null;
+        localVideo.srcObject = stream;
       }
       if (audioTracks.length > 0) {
         console.log(`Using audio device: ${audioTracks[0].label}`);
