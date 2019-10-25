@@ -71,7 +71,7 @@ export function UILoaded() {
 
   async function addCustomVideo() {
     let customStream = customVideo.captureStream();
-    customStream.getTracks().forEach(track => pc.addTrack(track, customStream));
+    customStream.getTracks().forEach(track => pc.addTrack(track, localStream));
     const offer = await pc.createOffer(offerOptions);
     await pc.setLocalDescription(offer);
     sendOfferViaSocket(offer.sdp);
@@ -291,6 +291,7 @@ export function UILoaded() {
 
   function getSelectedSdpSemantics() {
     return {
+      SdpSemantics: "unified-plan",
       iceServers: [
         {
           urls: "stun:stun.l.google.com:19302"
