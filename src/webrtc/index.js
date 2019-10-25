@@ -72,10 +72,9 @@ export function UILoaded() {
   async function addCustomVideo() {
     let customStream = customVideo.captureStream();
     customStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-    const offer = await pc.createOffer(offerOptions);
-    await pc.setLocalDescription(offer);
-    sendOfferViaSocket(offer.sdp);
-    //customStream = reader;
+    //const offer = await pc.createOffer(offerOptions);
+    //await pc.setLocalDescription(offer);
+    //sendOfferViaSocket(offer.sdp);
   }
 
   async function upgradeToVideo() {
