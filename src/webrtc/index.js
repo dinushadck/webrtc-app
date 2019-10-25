@@ -4,6 +4,8 @@ export function UILoaded() {
   const hangupButton = document.getElementById("hangupButton");
   const customVideoButton = document.getElementById("customVideoButton");
   const createSessionButton = document.getElementById("createSession");
+  const callAudioButton = document.getElementById("callAudioButton");
+  const upgradeButton = document.getElementById("upgradeButton");
   const caller = document.getElementById("caller");
   const callee = document.getElementById("callee");
   callButton.disabled = true;
@@ -13,6 +15,8 @@ export function UILoaded() {
   customVideoButton.addEventListener("click", addCustomVideo);
   hangupButton.addEventListener("click", hangup);
   createSessionButton.addEventListener("click", createSession);
+  callAudioButton.addEventListener("click", callAudio);
+  upgradeButton.addEventListener("click", upgradeToVideo);
 
   let callerSessionId = "";
   let callerHandleId = "";
@@ -70,6 +74,63 @@ export function UILoaded() {
     await pc.setLocalDescription(offer);
     sendOfferViaSocket(offer.sdp);
     //customStream = reader;
+  }
+
+  async function upgradeToVideo() {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: true
+    });
+    console.log("Received local stream");
+    localVideo.srcObject = null;
+    localVideo.srcObject = stream;
+    console.log("Starting call");
+    const videoTracks = localStream.getVideoTracks();
+    if (videoTracks.length > 0) {
+      console.log(`Using video device: ${videoTracks[0].label}`);
+    }
+    videoTracks.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+    const offer = await pc.createOffer(offerOptions);
+    await pc.setLocalDescription(offer);
+    sendOfferViaSocket(offer.sdp);
+  }
+
+  async function callAudio() {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: false,
+      audio: true
+    });
+    console.log("Received local stream");
+    localStream = stream;
+    console.log("Starting call");
+    startTime = window.performance.now();
+    const audioTracks = localStream.getAudioTracks();
+
+    if (audioTracks.length > 0) {
+      console.log(`Using audio device: ${audioTracks[0].label}`);
+    }
+    const configuration = getSelectedSdpSemantics();
+    console.log("RTCPeerConnection configuration:", configuration);
+    pc = new RTCPeerConnection(configuration);
+    console.log("Created local peer connection object pc");
+    pc.addEventListener("icecandidate", e => onIceCandidate(pc, e));
+    console.log("Created remote peer connection object pc");
+    pc.addEventListener("iceconnectionstatechange", e =>
+      onIceStateChange(pc, e)
+    );
+
+    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+    console.log("Added local stream to pc");
+
+    pc.addEventListener("track", gotRemoteStream);
+
+    try {
+      console.log("pc createOffer start");
+      const offer = await pc.createOffer(offerOptions);
+      await onCreateOfferSuccess(offer);
+    } catch (e) {
+      onCreateSessionDescriptionError(e);
+    }
   }
 
   let answerCall = async function(desc) {
