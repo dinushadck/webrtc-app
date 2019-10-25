@@ -86,7 +86,7 @@ export function UILoaded() {
     localVideo.srcObject = null;
     localVideo.srcObject = stream;
     console.log("Starting call");
-    const videoTracks = localStream.getVideoTracks();
+    const videoTracks = stream.getVideoTracks();
     if (videoTracks.length > 0) {
       console.log(`Using video device: ${videoTracks[0].label}`);
     }
