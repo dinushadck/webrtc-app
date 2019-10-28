@@ -72,7 +72,8 @@ function App() {
               <br />
               <br />
               <div className="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                <button id="createSession">Create Session</button>
+                <button id="createSession">Create Session WEBRTC</button>
+                <button id="createSessionSIP">Create Session SIP</button>
               </div>
             </div>
             <br />

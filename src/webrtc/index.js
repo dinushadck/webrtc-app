@@ -4,6 +4,7 @@ export function UILoaded() {
   const hangupButton = document.getElementById("hangupButton");
   const customVideoButton = document.getElementById("customVideoButton");
   const createSessionButton = document.getElementById("createSession");
+  const createSessionSIPButton = document.getElementById("createSessionSIP");
   const callAudioButton = document.getElementById("callAudioButton");
   const upgradeButton = document.getElementById("upgradeButton");
   const startUpgradeButton = document.getElementById("startUpgradeButton");
@@ -16,6 +17,7 @@ export function UILoaded() {
   customVideoButton.addEventListener("click", addCustomVideo);
   hangupButton.addEventListener("click", hangup);
   createSessionButton.addEventListener("click", createSession);
+  createSessionSIPButton.addEventListener("click", createSessionSIP);
   callAudioButton.addEventListener("click", callAudio);
   upgradeButton.addEventListener("click", upgradeToVideo);
   startUpgradeButton.addEventListener("click", startUpgrade);
@@ -25,16 +27,17 @@ export function UILoaded() {
 
   let localStream;
   let customStream;
+  let isNewVideoSent = false;
   let pc = null;
   const offerOptions = {
     offerToReceiveAudio: 1,
-    offerToReceiveVideo: 1
-    //iceRestart: true
+    offerToReceiveVideo: 1,
+    iceRestart: true
   };
 
   //==================WEB SOCKET===================//
 
-  let socket = new WebSocket("wss://192.168.1.5:4000", "echo-protocol");
+  let socket = new WebSocket("ws://192.168.1.5:4000", "echo-protocol");
   socket.onopen = function(e) {
     //alert("[open] Connection established");
   };
@@ -70,11 +73,36 @@ export function UILoaded() {
   };
 
   async function addCustomVideo() {
+    isNewVideoSent = true;
     let customStream = customVideo.captureStream();
+
+    // Replace Track //
+    /* let senders = pc.getSenders();
+    const videoTracks = customStream.getVideoTracks();
+    let videoTrackSender = senders.filter(item => {
+      return item.track.kind === "video";
+    });
+    videoTrackSender[0].replaceTrack(videoTracks[0]); */
+
+    // Add New Track //
+
     customStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-    //const offer = await pc.createOffer(offerOptions);
-    //await pc.setLocalDescription(offer);
-    //sendOfferViaSocket(offer.sdp);
+  }
+
+  async function createSessionSIP() {
+    let authUser = caller.value.split("@")[0].replace("sip:", "");
+
+    let message = {
+      type: "init",
+      authuser: authUser,
+      display_name: authUser,
+      secret: "1234",
+      host: "sip:192.168.1.4",
+      caller_username: caller.value,
+      plugin: "sip"
+    };
+
+    socket.send(JSON.stringify(message));
   }
 
   async function upgradeToVideo() {
@@ -338,18 +366,23 @@ export function UILoaded() {
     }
   }
 
-  function onNegotiationNeeded() {
-    pc.createOffer()
-      .then(offer => {
-        return pc.setLocalDescription(offer);
-      })
-      .then(() => {
+  async function onNegotiationNeeded() {
+    try {
+      if (isNewVideoSent) {
+        let offer = await pc.createOffer(offerOptions);
+        await pc.setLocalDescription(offer);
         let obj = {
           type: "offer_update",
-          sdp: pc.localDescription
+          sdp: pc.localDescription.sdp,
+          callee_username: callee.value,
+          caller_session_id: callerSessionId,
+          caller_handle_id: callerHandleId
         };
         socket.send(JSON.stringify(obj));
-      });
+      }
+    } catch (ex) {
+      console.log(ex);
+    }
   }
 
   function onCreateSessionDescriptionError(error) {
