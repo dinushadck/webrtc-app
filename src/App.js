@@ -63,6 +63,8 @@ function App() {
               <div className="col-lg-2 col-md-2 col-sm-3 col-xs-3">
                 <lable>My Id : {"   "}</lable>
                 <input id="caller" type="text"></input>
+                <lable>Token : {"   "}</lable>
+                <input id="token" type="text"></input>
               </div>
               <div className="col-lg-2 col-md-2 col-sm-3 col-xs-3">
                 <lable>Callee Id : {"   "}</lable>
@@ -72,6 +74,7 @@ function App() {
               <br />
               <br />
               <div className="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                <button id="createSocket">Create Socket</button>
                 <button id="createSession">Create Session WEBRTC</button>
                 <button id="createSessionSIP">Create Session SIP</button>
               </div>

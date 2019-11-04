@@ -1,15 +1,18 @@
+import { Socket } from "../socket_io";
 export function UILoaded() {
   const startButton = document.getElementById("startButton");
   const callButton = document.getElementById("callButton");
   const hangupButton = document.getElementById("hangupButton");
   const customVideoButton = document.getElementById("customVideoButton");
   const createSessionButton = document.getElementById("createSession");
+  const createSocketButton = document.getElementById("createSocket");
   const createSessionSIPButton = document.getElementById("createSessionSIP");
   const callAudioButton = document.getElementById("callAudioButton");
   const upgradeButton = document.getElementById("upgradeButton");
   const startUpgradeButton = document.getElementById("startUpgradeButton");
   const caller = document.getElementById("caller");
   const callee = document.getElementById("callee");
+  const token = document.getElementById("token");
   callButton.disabled = true;
   hangupButton.disabled = true;
   startButton.addEventListener("click", start);
@@ -21,6 +24,10 @@ export function UILoaded() {
   callAudioButton.addEventListener("click", callAudio);
   upgradeButton.addEventListener("click", upgradeToVideo);
   startUpgradeButton.addEventListener("click", startUpgrade);
+  createSocketButton.addEventListener("click", createSocket);
+
+  startButton.disabled = true;
+  createSessionButton.disabled = true;
 
   let callerSessionId = "";
   let callerHandleId = "";
@@ -35,42 +42,50 @@ export function UILoaded() {
     iceRestart: true
   };
 
-  //==================WEB SOCKET===================//
+  let socket = null;
 
-  let socket = new WebSocket("ws://192.168.1.5:4000", "echo-protocol");
-  socket.onopen = function(e) {
-    //alert("[open] Connection established");
-  };
+  let evtOb = {};
+  evtOb["init"] = oninit;
+  evtOb["call_answered"] = onAnswer;
+  evtOb["incoming_call"] = onIncomingCall;
+  evtOb["on_ice"] = onIce;
+  evtOb["success"] = onSuccess;
 
-  socket.onmessage = async function(event) {
+  async function createSocket() {
+    socket = new Socket(token.value, "192.168.1.8:3000", evtOb);
+  }
+
+  async function onSuccess(event) {
+    startButton.disabled = false;
+    createSessionButton.disabled = false;
+  }
+
+  async function oninit(event) {
     let jsonMessage = JSON.parse(event.data);
-    switch (jsonMessage.type) {
-      case "init":
-        callerSessionId = jsonMessage.caller_session_id;
-        callerHandleId = jsonMessage.caller_handle_id;
-        //can offer message method
-        break;
-      case "call_answered":
-        let descAccepted = {
-          type: "answer",
-          sdp: jsonMessage.callee_sdp
-        };
-        acceptCall(descAccepted);
-        break;
-      case "incoming_call":
-        let descIncoming = {
-          type: "offer",
-          sdp: jsonMessage.caller_sdp
-        };
-        answerCall(descIncoming);
-        break;
-      case "on_ice":
-        await pc.addIceCandidate(jsonMessage.candidate);
-        onAddIceCandidateSuccess(pc);
-        break;
-    }
-    alert(`[message] Data received from server: ${event.data}`);
-  };
+    callerSessionId = jsonMessage.caller_session_id;
+    callerHandleId = jsonMessage.caller_handle_id;
+  }
+
+  async function onAnswer(event) {
+    let descAccepted = {
+      type: "answer",
+      sdp: event.data.callee_sdp
+    };
+    acceptCall(descAccepted);
+  }
+
+  async function onIncomingCall(event) {
+    let descIncoming = {
+      type: "offer",
+      sdp: event.data.caller_sdp
+    };
+    answerCall(descIncoming);
+  }
+
+  async function onIce(event) {
+    await pc.addIceCandidate(event.data.candidate);
+    onAddIceCandidateSuccess(pc);
+  }
 
   async function addCustomVideo() {
     isNewVideoSent = true;
@@ -233,7 +248,7 @@ export function UILoaded() {
     }
   };
 
-  socket.onclose = function(event) {
+  /* socket.onclose = function(event) {
     if (event.wasClean) {
       alert(
         `[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`
@@ -247,17 +262,30 @@ export function UILoaded() {
 
   socket.onerror = function(error) {
     alert(`[error] ${error.message}`);
-  };
+  }; */
 
   //===========================================//
 
   async function createSession() {
-    let message = {
+    /* let message = {
       type: "init",
       caller_username: caller.value
+    }; */
+
+    let user = {
+      from: {
+        id: caller.value,
+        name: caller.value
+      },
+      to: {
+        id: callee.value,
+        name: callee.value
+      }
     };
 
-    socket.send(JSON.stringify(message));
+    socket.send("call", "init", user, null);
+
+    //socket.send(JSON.stringify(message));
   }
 
   let startTime;
@@ -301,7 +329,8 @@ export function UILoaded() {
 
   async function start() {
     console.log("Requesting local stream");
-    startButton.disabled = true;
+    //startButton.disabled = true;
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
@@ -311,6 +340,8 @@ export function UILoaded() {
       localVideo.srcObject = stream;
       localStream = stream;
       callButton.disabled = false;
+
+      socket.send("register", null, null, caller.value);
     } catch (e) {
       alert(`getUserMedia() error: ${e.name}`);
     }
@@ -390,15 +421,28 @@ export function UILoaded() {
   }
 
   function sendOfferViaSocket(sdp) {
-    let message = {
+    /* let message = {
       type: "offer",
       sdp: sdp,
       callee_username: callee.value,
       caller_session_id: callerSessionId,
       caller_handle_id: callerHandleId
+    }; */
+
+    let user = {
+      from: {
+        id: caller.value,
+        name: caller.value
+      },
+      to: {
+        id: callee.value,
+        name: callee.value
+      }
     };
 
-    socket.send(JSON.stringify(message));
+    socket.send("call", "offer", user, sdp);
+
+    //socket.send(JSON.stringify(message));
   }
 
   async function onCreateOfferSuccess(desc) {
@@ -444,14 +488,16 @@ export function UILoaded() {
     console.log("pc setLocalDescription start");
     try {
       await pc.setLocalDescription(desc);
-      let message = {
+      /* let message = {
         type: "accept",
         sdp: desc.sdp,
         caller_session_id: callerSessionId,
         caller_handle_id: callerHandleId
-      };
+      }; */
 
-      socket.send(JSON.stringify(message));
+      socket.send("call", "accept", null, desc.sdp);
+
+      //socket.send(JSON.stringify(message));
       onSetLocalSuccess(pc);
     } catch (e) {
       onSetSessionDescriptionError(e);
@@ -461,22 +507,26 @@ export function UILoaded() {
   async function onIceCandidate(pc, event) {
     try {
       if (event.candidate) {
-        let iceCand = {
+        /* let iceCand = {
           type: "trickle",
           caller_session_id: callerSessionId,
           caller_handle_id: callerHandleId,
           candidate: event.candidate
-        };
+        }; */
 
-        socket.send(JSON.stringify(iceCand));
+        socket.send("call", "trickle", null, event.candidate);
+
+        /* socket.send(JSON.stringify(iceCand)); */
       } else {
-        let iceCandEnd = {
+        /* let iceCandEnd = {
           type: "trickle_end",
           caller_session_id: callerSessionId,
           caller_handle_id: callerHandleId
-        };
+        }; */
 
-        socket.send(JSON.stringify(iceCandEnd));
+        socket.send("call", "trickle_end", null, null);
+
+        /* socket.send(JSON.stringify(iceCandEnd)); */
       }
     } catch (e) {}
     console.log(

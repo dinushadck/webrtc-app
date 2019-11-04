@@ -6,7 +6,9 @@
     "bootstrap": "^4.3.1",
     "react": "^16.10.1",
     "react-dom": "^16.10.1",
-    "react-scripts": "3.1.2"
+    "react-scripts": "3.1.2",
+    "socket.io-client": "^2.3.0",
+    "uuid": "^3.3.3"
   },
   "scripts": {
     "start": "react-scripts start",
