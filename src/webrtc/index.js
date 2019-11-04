@@ -61,15 +61,15 @@ export function UILoaded() {
   }
 
   async function oninit(event) {
-    let jsonMessage = JSON.parse(event.data);
+    /* let jsonMessage = JSON.parse(event.data);
     callerSessionId = jsonMessage.caller_session_id;
-    callerHandleId = jsonMessage.caller_handle_id;
+    callerHandleId = jsonMessage.caller_handle_id; */
   }
 
   async function onAnswer(event) {
     let descAccepted = {
       type: "answer",
-      sdp: event.data.callee_sdp
+      sdp: event.sdp
     };
     acceptCall(descAccepted);
   }
@@ -77,13 +77,13 @@ export function UILoaded() {
   async function onIncomingCall(event) {
     let descIncoming = {
       type: "offer",
-      sdp: event.data.caller_sdp
+      sdp: event.sdp
     };
     answerCall(descIncoming);
   }
 
   async function onIce(event) {
-    await pc.addIceCandidate(event.data.candidate);
+    await pc.addIceCandidate(event.candidate);
     onAddIceCandidateSuccess(pc);
   }
 

@@ -36,31 +36,33 @@ export class Socket {
     this._socket.on("call", message => {
       let jsonObj = JSON.parse(message);
 
-      switch (jsonObj.event) {
-        case "init": {
-          this._sid = jsonObj.session_id;
-          break;
-        }
-        case "call_answered": {
-          if (this._eventHandlers["call_answered"]) {
-            this._eventHandlers["call_answered"](jsonObj);
+      if (jsonObj) {
+        switch (jsonObj.event) {
+          case "init": {
+            this._sid = jsonObj.session_id;
+            break;
           }
-          break;
-        }
-        case "incoming_call": {
-          if (this._eventHandlers["incoming_call"]) {
-            this._eventHandlers["incoming_call"](jsonObj);
+          case "call_answered": {
+            if (this._eventHandlers["call_answered"]) {
+              this._eventHandlers["call_answered"](jsonObj);
+            }
+            break;
           }
-          break;
-        }
-        case "on_ice": {
-          if (this._eventHandlers["on_ice"]) {
-            this._eventHandlers["on_ice"](jsonObj);
+          case "incoming_call": {
+            if (this._eventHandlers["incoming_call"]) {
+              this._eventHandlers["incoming_call"](jsonObj);
+            }
+            break;
           }
-          break;
+          case "on_ice": {
+            if (this._eventHandlers["on_ice"]) {
+              this._eventHandlers["on_ice"](jsonObj);
+            }
+            break;
+          }
+          default:
+            break;
         }
-        default:
-          break;
       }
     });
   }
