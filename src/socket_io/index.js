@@ -67,7 +67,7 @@ export class Socket {
     });
   }
 
-  send(channel, event, data, content) {
+  send(channel, event, data, content, ack) {
     let sessionEvent = {
       mid: uuid(),
       channel: channel,
@@ -104,7 +104,11 @@ export class Socket {
         return new Error("Unsupported Channel Type");
       }
     }
-    this._socket.emit(channel, JSON.stringify(sessionEvent));
+    this._socket.emit(channel, JSON.stringify(sessionEvent), ackData => {
+      if (ack) {
+        ack(ackData);
+      }
+    });
     return sessionEvent;
   }
 }

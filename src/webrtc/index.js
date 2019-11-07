@@ -283,7 +283,9 @@ export function UILoaded() {
       }
     };
 
-    socket.send("call", "init", user, null);
+    socket.send("call", "init", user, null, ack => {
+      console.log(ack);
+    });
 
     //socket.send(JSON.stringify(message));
   }
@@ -341,7 +343,9 @@ export function UILoaded() {
       localStream = stream;
       callButton.disabled = false;
 
-      socket.send("register", null, null, caller.value);
+      socket.send("register", null, null, caller.value, ack => {
+        console.log(ack);
+      });
     } catch (e) {
       alert(`getUserMedia() error: ${e.name}`);
     }
@@ -440,7 +444,9 @@ export function UILoaded() {
       }
     };
 
-    socket.send("call", "offer", user, sdp);
+    socket.send("call", "offer", user, sdp, ack => {
+      console.log(ack);
+    });
 
     //socket.send(JSON.stringify(message));
   }
@@ -495,7 +501,9 @@ export function UILoaded() {
         caller_handle_id: callerHandleId
       }; */
 
-      socket.send("call", "accept", null, desc.sdp);
+      socket.send("call", "accept", null, desc.sdp, ack => {
+        console.log(ack);
+      });
 
       //socket.send(JSON.stringify(message));
       onSetLocalSuccess(pc);
@@ -514,7 +522,9 @@ export function UILoaded() {
           candidate: event.candidate
         }; */
 
-        socket.send("call", "trickle", null, event.candidate);
+        socket.send("call", "trickle", null, event.candidate, ack => {
+          console.log(ack);
+        });
 
         /* socket.send(JSON.stringify(iceCand)); */
       } else {
@@ -524,7 +534,9 @@ export function UILoaded() {
           caller_handle_id: callerHandleId
         }; */
 
-        socket.send("call", "trickle_end", null, null);
+        socket.send("call", "trickle_end", null, null, ack => {
+          console.log(ack);
+        });
 
         /* socket.send(JSON.stringify(iceCandEnd)); */
       }
