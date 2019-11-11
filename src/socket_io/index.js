@@ -1,7 +1,18 @@
-import io from "socket.io-client";
-import uuid from "uuid/v1";
+/* import io from "socket.io-client";
+import uuid from "uuid/v1"; */
+import { Socket } from "./socket";
+import { Call } from "./call";
+import { Chat } from "./chat";
 
-export class Socket {
+export class ChannelFactory {
+  constructor(authToken, path, callEventHandlers, chatEventHandlers, socketEventHandlers) {
+    this.socketClient = new Socket(authToken, path, socketEventHandlers);
+    this.call = new Call(this.socketClient.socket, callEventHandlers);
+    this.chat = new Chat(this.socketClient.socket, chatEventHandlers);
+  }
+}
+
+/* export class Socket {
   constructor(authToken, path, handlers) {
     this._eventHandlers = handlers;
     this._socket = io(path, {
@@ -28,20 +39,16 @@ export class Socket {
 
     this._socket.on("success", message => {
       if (this._eventHandlers["success"]) {
-        let jsonObj = JSON.parse(message);
+        let jsonObj = message;
         this._eventHandlers["success"](jsonObj);
       }
     });
 
     this._socket.on("call", message => {
-      let jsonObj = JSON.parse(message);
+      let jsonObj = message;
 
       if (jsonObj) {
         switch (jsonObj.event) {
-          case "init": {
-            this._sid = jsonObj.session_id;
-            break;
-          }
           case "call_answered": {
             if (this._eventHandlers["call_answered"]) {
               this._eventHandlers["call_answered"](jsonObj);
@@ -67,10 +74,10 @@ export class Socket {
     });
   }
 
-  send(channel, event, data, content, ack) {
+  sendChatEvent(event, type, data, content) {
     let sessionEvent = {
       mid: uuid(),
-      channel: channel,
+      channel: "call",
       event: event,
       timestamp: Date.now(),
       content: content,
@@ -82,33 +89,41 @@ export class Socket {
       sessionEvent.to = data.to;
     }
 
-    switch (channel) {
-      case "call": {
-        if (
-          !(
-            event === "init" ||
-            event === "offer" ||
-            event === "accept" ||
-            event === "answer" ||
-            event === "trickle" ||
-            event === "trickle_end"
-          )
-        ) {
-          return new Error("Unsupported Event Type");
-        }
-        break;
-      }
-      case "register":
-        break;
-      default: {
-        return new Error("Unsupported Channel Type");
-      }
+    if (!(event === "init" || event === "offer" || event === "accept" || event === "answer" || event === "trickle" || event === "trickle_end")) {
+      return new Error("Unsupported Event Type");
     }
-    this._socket.emit(channel, JSON.stringify(sessionEvent), ackData => {
-      if (ack) {
-        ack(ackData);
+    this._socket.emit("call", sessionEvent, ackData => {
+      if (event === "init" && ackData && ackData.session_id) {
+        this._sid = ackData.session_id;
       }
     });
     return sessionEvent;
   }
-}
+
+
+  sendCallEvent(event, data, content) {
+    let sessionEvent = {
+      mid: uuid(),
+      channel: "call",
+      event: event,
+      timestamp: Date.now(),
+      content: content,
+      sid: this._sid
+    };
+
+    if (data) {
+      sessionEvent.from = data.from;
+      sessionEvent.to = data.to;
+    }
+
+    if (!(event === "init" || event === "offer" || event === "accept" || event === "answer" || event === "trickle" || event === "trickle_end")) {
+      return new Error("Unsupported Event Type");
+    }
+    this._socket.emit("call", sessionEvent, ackData => {
+      if (event === "init" && ackData && ackData.session_id) {
+        this._sid = ackData.session_id;
+      }
+    });
+    return sessionEvent;
+  }
+} */

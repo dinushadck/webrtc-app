@@ -1,4 +1,4 @@
-import { Socket } from "../socket_io";
+import { ChannelFactory } from "../socket_io";
 export function UILoaded() {
   const startButton = document.getElementById("startButton");
   const callButton = document.getElementById("callButton");
@@ -13,8 +13,8 @@ export function UILoaded() {
   const caller = document.getElementById("caller");
   const callee = document.getElementById("callee");
   const token = document.getElementById("token");
-  callButton.disabled = true;
-  hangupButton.disabled = true;
+  callButton.disabled = false;
+  hangupButton.disabled = false;
   startButton.addEventListener("click", start);
   callButton.addEventListener("click", call);
   customVideoButton.addEventListener("click", addCustomVideo);
@@ -26,8 +26,8 @@ export function UILoaded() {
   startUpgradeButton.addEventListener("click", startUpgrade);
   createSocketButton.addEventListener("click", createSocket);
 
-  startButton.disabled = true;
-  createSessionButton.disabled = true;
+  startButton.disabled = false;
+  createSessionButton.disabled = false;
 
   let callerSessionId = "";
   let callerHandleId = "";
@@ -42,7 +42,7 @@ export function UILoaded() {
     iceRestart: true
   };
 
-  let socket = null;
+  let factory = null;
 
   let evtOb = {};
   evtOb["init"] = oninit;
@@ -52,7 +52,7 @@ export function UILoaded() {
   evtOb["success"] = onSuccess;
 
   async function createSocket() {
-    socket = new Socket(token.value, "192.168.1.8:3000", evtOb);
+    factory = new ChannelFactory(token.value, "192.168.1.8:3000", evtOb, {}, {});
   }
 
   async function onSuccess(event) {
@@ -116,8 +116,7 @@ export function UILoaded() {
       caller_username: caller.value,
       plugin: "sip"
     };
-
-    socket.send(JSON.stringify(message));
+    factory.call.sendCallEvent(JSON.stringify(message));
   }
 
   async function upgradeToVideo() {
@@ -183,7 +182,7 @@ export function UILoaded() {
     }
   }
 
-  let answerCall = async function(desc) {
+  let answerCall = async function (desc) {
     if (pc === null) {
       const videoTracks = localStream.getVideoTracks();
       const audioTracks = localStream.getAudioTracks();
@@ -234,7 +233,7 @@ export function UILoaded() {
     }
   };
 
-  let acceptCall = async function(desc) {
+  let acceptCall = async function (desc) {
     console.log("pc createAnswer start");
     // Since the 'remote' side has no media stream we need
     // to pass in the right constraints in order for it to
@@ -283,9 +282,7 @@ export function UILoaded() {
       }
     };
 
-    socket.send("call", "init", user, null, ack => {
-      console.log(ack);
-    });
+    factory.call.sendCallEvent("init", user, null);
 
     //socket.send(JSON.stringify(message));
   }
@@ -296,13 +293,13 @@ export function UILoaded() {
   const customVideo = document.getElementById("customVideo");
   const receiveVideo = document.getElementById("receiveVideo");
 
-  localVideo.addEventListener("loadedmetadata", function() {
+  localVideo.addEventListener("loadedmetadata", function () {
     console.log(
       `Local video videoWidth: ${this.videoWidth}px,  videoHeight: ${this.videoHeight}px`
     );
   });
 
-  remoteVideo.addEventListener("loadedmetadata", function() {
+  remoteVideo.addEventListener("loadedmetadata", function () {
     console.log(
       `Remote video videoWidth: ${this.videoWidth}px,  videoHeight: ${this.videoHeight}px`
     );
@@ -342,10 +339,6 @@ export function UILoaded() {
       localVideo.srcObject = stream;
       localStream = stream;
       callButton.disabled = false;
-
-      socket.send("register", null, null, caller.value, ack => {
-        console.log(ack);
-      });
     } catch (e) {
       alert(`getUserMedia() error: ${e.name}`);
     }
@@ -363,7 +356,7 @@ export function UILoaded() {
   }
 
   async function call() {
-    callButton.disabled = true;
+    callButton.disabled = false;
     hangupButton.disabled = false;
     console.log("Starting call");
     startTime = window.performance.now();
@@ -413,7 +406,7 @@ export function UILoaded() {
           caller_session_id: callerSessionId,
           caller_handle_id: callerHandleId
         };
-        socket.send(JSON.stringify(obj));
+        factory.call.sendCallEvent(JSON.stringify(obj));
       }
     } catch (ex) {
       console.log(ex);
@@ -444,9 +437,7 @@ export function UILoaded() {
       }
     };
 
-    socket.send("call", "offer", user, sdp, ack => {
-      console.log(ack);
-    });
+    factory.call.sendCallEvent("offer", user, sdp);
 
     //socket.send(JSON.stringify(message));
   }
@@ -501,9 +492,7 @@ export function UILoaded() {
         caller_handle_id: callerHandleId
       }; */
 
-      socket.send("call", "accept", null, desc.sdp, ack => {
-        console.log(ack);
-      });
+      factory.call.sendCallEvent("accept", null, desc.sdp);
 
       //socket.send(JSON.stringify(message));
       onSetLocalSuccess(pc);
@@ -522,9 +511,7 @@ export function UILoaded() {
           candidate: event.candidate
         }; */
 
-        socket.send("call", "trickle", null, event.candidate, ack => {
-          console.log(ack);
-        });
+        factory.call.sendCallEvent("trickle", null, event.candidate);
 
         /* socket.send(JSON.stringify(iceCand)); */
       } else {
@@ -534,16 +521,14 @@ export function UILoaded() {
           caller_handle_id: callerHandleId
         }; */
 
-        socket.send("call", "trickle_end", null, null, ack => {
-          console.log(ack);
-        });
+        factory.call.sendCallEvent("trickle_end", null, null);
 
         /* socket.send(JSON.stringify(iceCandEnd)); */
       }
-    } catch (e) {}
+    } catch (e) { }
     console.log(
       `${getName(pc)} ICE candidate:\n${
-        event.candidate ? event.candidate.candidate : "(null)"
+      event.candidate ? event.candidate.candidate : "(null)"
       }`
     );
   }
