@@ -10,11 +10,41 @@ export function UILoaded() {
   const callAudioButton = document.getElementById("callAudioButton");
   const upgradeButton = document.getElementById("upgradeButton");
   const startUpgradeButton = document.getElementById("startUpgradeButton");
+
+
+  let startTime;
+  const localVideo = document.getElementById("localVideo");
+  const remoteVideo = document.getElementById("remoteVideo");
+
+  localVideo.addEventListener("loadedmetadata", function () {
+    console.log(
+      `Local video videoWidth: ${this.videoWidth}px,  videoHeight: ${this.videoHeight}px`
+    );
+  });
+
+  remoteVideo.addEventListener("loadedmetadata", function () {
+    console.log(
+      `Remote video videoWidth: ${this.videoWidth}px,  videoHeight: ${this.videoHeight}px`
+    );
+  });
+
+  remoteVideo.addEventListener("resize", () => {
+    console.log(
+      `Remote video size changed to ${remoteVideo.videoWidth}x${remoteVideo.videoHeight}`
+    );
+    // We'll use the first onsize callback as an indication that video has started
+    // playing out.
+    if (startTime) {
+      const elapsedTime = window.performance.now() - startTime;
+      console.log("Setup time: " + elapsedTime.toFixed(3) + "ms");
+      startTime = null;
+    }
+  });
+
   const caller = document.getElementById("caller");
   const callee = document.getElementById("callee");
   const token = document.getElementById("token");
-  callButton.disabled = false;
-  hangupButton.disabled = false;
+
   startButton.addEventListener("click", start);
   callButton.addEventListener("click", call);
   customVideoButton.addEventListener("click", addCustomVideo);
@@ -26,15 +56,7 @@ export function UILoaded() {
   startUpgradeButton.addEventListener("click", startUpgrade);
   createSocketButton.addEventListener("click", createSocket);
 
-  startButton.disabled = false;
-  createSessionButton.disabled = false;
-
-  let callerSessionId = "";
-  let callerHandleId = "";
-
   let localStream;
-  let customStream;
-  let isNewVideoSent = false;
   let pc = null;
   const offerOptions = {
     offerToReceiveAudio: 1,
@@ -50,6 +72,7 @@ export function UILoaded() {
   evtOb["incoming_call"] = onIncomingCall;
   evtOb["on_ice"] = onIce;
   evtOb["success"] = onSuccess;
+  evtOb["on_init"] = onInit;
 
   async function createSocket() {
     factory = new ChannelFactory(token.value, "192.168.1.8:3000", evtOb, {}, {});
@@ -60,10 +83,8 @@ export function UILoaded() {
     createSessionButton.disabled = false;
   }
 
-  async function oninit(event) {
-    /* let jsonMessage = JSON.parse(event.data);
-    callerSessionId = jsonMessage.caller_session_id;
-    callerHandleId = jsonMessage.caller_handle_id; */
+  async function onInit(event) {
+    //handle init event
   }
 
   async function onAnswer(event) {
@@ -74,112 +95,26 @@ export function UILoaded() {
     acceptCall(descAccepted);
   }
 
+  let acceptCall = async function (desc) {
+    console.log("pc createAnswer start");
+    // Since the 'remote' side has no media stream we need
+    // to pass in the right constraints in order for it to
+    // accept the incoming offer of audio and video.
+    console.log("pc setRemoteDescription start");
+    try {
+      await pc.setRemoteDescription(desc);
+      onSetRemoteSuccess(pc);
+    } catch (e) {
+      onSetSessionDescriptionError();
+    }
+  };
+
   async function onIncomingCall(event) {
     let descIncoming = {
       type: "offer",
       sdp: event.sdp
     };
     answerCall(descIncoming);
-  }
-
-  async function onIce(event) {
-    await pc.addIceCandidate(event.candidate);
-    onAddIceCandidateSuccess(pc);
-  }
-
-  async function addCustomVideo() {
-    isNewVideoSent = true;
-    let customStream = customVideo.captureStream();
-
-    // Replace Track //
-    /* let senders = pc.getSenders();
-    const videoTracks = customStream.getVideoTracks();
-    let videoTrackSender = senders.filter(item => {
-      return item.track.kind === "video";
-    });
-    videoTrackSender[0].replaceTrack(videoTracks[0]); */
-
-    // Add New Track //
-
-    customStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-  }
-
-  async function createSessionSIP() {
-    let authUser = caller.value.split("@")[0].replace("sip:", "");
-
-    let message = {
-      type: "init",
-      authuser: authUser,
-      display_name: authUser,
-      secret: "1234",
-      host: "sip:192.168.1.4",
-      caller_username: caller.value,
-      plugin: "sip"
-    };
-    factory.call.sendCallEvent(JSON.stringify(message));
-  }
-
-  async function upgradeToVideo() {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: true
-    });
-    console.log("Received local stream");
-    localVideo.srcObject = null;
-    localVideo.srcObject = stream;
-    console.log("Starting call");
-    const videoTracks = stream.getVideoTracks();
-    if (videoTracks.length > 0) {
-      console.log(`Using video device: ${videoTracks[0].label}`);
-    }
-    videoTracks.getTracks().forEach(track => pc.addTrack(track, localStream));
-
-    const offer = await pc.createOffer(offerOptions);
-    await pc.setLocalDescription(offer);
-    sendOfferViaSocket(offer.sdp);
-  }
-
-  async function startUpgrade() {
-    console.log("Requesting local stream");
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: false,
-        audio: true
-      });
-      console.log("Received local stream");
-      localStream = stream;
-    } catch (e) {
-      alert(`getUserMedia() error: ${e.name}`);
-    }
-  }
-
-  async function callAudio() {
-    const audioTracks = localStream.getAudioTracks();
-
-    if (audioTracks.length > 0) {
-      console.log(`Using audio device: ${audioTracks[0].label}`);
-    }
-    const configuration = getSelectedSdpSemantics();
-    console.log("RTCPeerConnection configuration:", configuration);
-    pc = new RTCPeerConnection(configuration);
-    console.log("Created local peer connection object pc");
-    pc.addEventListener("icecandidate", e => onIceCandidate(pc, e));
-    console.log("Created remote peer connection object pc");
-    pc.addEventListener("iceconnectionstatechange", e =>
-      onIceStateChange(pc, e)
-    );
-
-    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-    console.log("Added local stream to pc");
-
-    pc.addEventListener("track", gotRemoteStream);
-
-    try {
-      console.log("pc createOffer start");
-      const offer = await pc.createOffer(offerOptions);
-      await onCreateOfferSuccess(offer);
-    } catch (e) {
-      onCreateSessionDescriptionError(e);
-    }
   }
 
   let answerCall = async function (desc) {
@@ -233,43 +168,43 @@ export function UILoaded() {
     }
   };
 
-  let acceptCall = async function (desc) {
-    console.log("pc createAnswer start");
-    // Since the 'remote' side has no media stream we need
-    // to pass in the right constraints in order for it to
-    // accept the incoming offer of audio and video.
-    console.log("pc setRemoteDescription start");
+  async function onIce(event) {
+    await pc.addIceCandidate(event.candidate);
+    onAddIceCandidateSuccess(pc);
+  }
+
+  ///AUDIO ONLY CALL IMPLEMENTATION
+  async function callAudio() {
+    const audioTracks = localStream.getAudioTracks();
+
+    if (audioTracks.length > 0) {
+      console.log(`Using audio device: ${audioTracks[0].label}`);
+    }
+    const configuration = getSelectedSdpSemantics();
+    console.log("RTCPeerConnection configuration:", configuration);
+    pc = new RTCPeerConnection(configuration);
+    console.log("Created local peer connection object pc");
+    pc.addEventListener("icecandidate", e => onIceCandidate(pc, e));
+    console.log("Created remote peer connection object pc");
+    pc.addEventListener("iceconnectionstatechange", e =>
+      onIceStateChange(pc, e)
+    );
+
+    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+    console.log("Added local stream to pc");
+
+    pc.addEventListener("track", gotRemoteStream);
+
     try {
-      await pc.setRemoteDescription(desc);
-      onSetRemoteSuccess(pc);
+      console.log("pc createOffer start");
+      const offer = await pc.createOffer(offerOptions);
+      await onCreateOfferSuccess(offer);
     } catch (e) {
-      onSetSessionDescriptionError();
+      onCreateSessionDescriptionError(e);
     }
-  };
-
-  /* socket.onclose = function(event) {
-    if (event.wasClean) {
-      alert(
-        `[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`
-      );
-    } else {
-      // e.g. server process killed or network down
-      // event.code is usually 1006 in this case
-      alert("[close] Connection died");
-    }
-  };
-
-  socket.onerror = function(error) {
-    alert(`[error] ${error.message}`);
-  }; */
-
-  //===========================================//
+  }
 
   async function createSession() {
-    /* let message = {
-      type: "init",
-      caller_username: caller.value
-    }; */
 
     let user = {
       from: {
@@ -283,47 +218,6 @@ export function UILoaded() {
     };
 
     factory.call.sendCallEvent("init", user, null);
-
-    //socket.send(JSON.stringify(message));
-  }
-
-  let startTime;
-  const localVideo = document.getElementById("localVideo");
-  const remoteVideo = document.getElementById("remoteVideo");
-  const customVideo = document.getElementById("customVideo");
-  const receiveVideo = document.getElementById("receiveVideo");
-
-  localVideo.addEventListener("loadedmetadata", function () {
-    console.log(
-      `Local video videoWidth: ${this.videoWidth}px,  videoHeight: ${this.videoHeight}px`
-    );
-  });
-
-  remoteVideo.addEventListener("loadedmetadata", function () {
-    console.log(
-      `Remote video videoWidth: ${this.videoWidth}px,  videoHeight: ${this.videoHeight}px`
-    );
-  });
-
-  remoteVideo.addEventListener("resize", () => {
-    console.log(
-      `Remote video size changed to ${remoteVideo.videoWidth}x${remoteVideo.videoHeight}`
-    );
-    // We'll use the first onsize callback as an indication that video has started
-    // playing out.
-    if (startTime) {
-      const elapsedTime = window.performance.now() - startTime;
-      console.log("Setup time: " + elapsedTime.toFixed(3) + "ms");
-      startTime = null;
-    }
-  });
-
-  function getName(pc) {
-    return pc === pc ? "pc" : "pc";
-  }
-
-  function getOtherPc(pc) {
-    return pc === pc ? pc : pc;
   }
 
   async function start() {
@@ -383,8 +277,6 @@ export function UILoaded() {
 
     pc.addEventListener("track", gotRemoteStream);
 
-    pc.addEventListener("negotiationneeded", onNegotiationNeeded, false);
-
     try {
       console.log("pc createOffer start");
       const offer = await pc.createOffer(offerOptions);
@@ -394,37 +286,13 @@ export function UILoaded() {
     }
   }
 
-  async function onNegotiationNeeded() {
-    try {
-      if (isNewVideoSent) {
-        let offer = await pc.createOffer(offerOptions);
-        await pc.setLocalDescription(offer);
-        let obj = {
-          type: "offer_update",
-          sdp: pc.localDescription.sdp,
-          callee_username: callee.value,
-          caller_session_id: callerSessionId,
-          caller_handle_id: callerHandleId
-        };
-        factory.call.sendCallEvent(JSON.stringify(obj));
-      }
-    } catch (ex) {
-      console.log(ex);
-    }
-  }
+
 
   function onCreateSessionDescriptionError(error) {
     console.log(`Failed to create session description: ${error.toString()}`);
   }
 
   function sendOfferViaSocket(sdp) {
-    /* let message = {
-      type: "offer",
-      sdp: sdp,
-      callee_username: callee.value,
-      caller_session_id: callerSessionId,
-      caller_handle_id: callerHandleId
-    }; */
 
     let user = {
       from: {
@@ -438,8 +306,6 @@ export function UILoaded() {
     };
 
     factory.call.sendCallEvent("offer", user, sdp);
-
-    //socket.send(JSON.stringify(message));
   }
 
   async function onCreateOfferSuccess(desc) {
@@ -485,16 +351,8 @@ export function UILoaded() {
     console.log("pc setLocalDescription start");
     try {
       await pc.setLocalDescription(desc);
-      /* let message = {
-        type: "accept",
-        sdp: desc.sdp,
-        caller_session_id: callerSessionId,
-        caller_handle_id: callerHandleId
-      }; */
 
       factory.call.sendCallEvent("accept", null, desc.sdp);
-
-      //socket.send(JSON.stringify(message));
       onSetLocalSuccess(pc);
     } catch (e) {
       onSetSessionDescriptionError(e);
@@ -504,26 +362,11 @@ export function UILoaded() {
   async function onIceCandidate(pc, event) {
     try {
       if (event.candidate) {
-        /* let iceCand = {
-          type: "trickle",
-          caller_session_id: callerSessionId,
-          caller_handle_id: callerHandleId,
-          candidate: event.candidate
-        }; */
 
         factory.call.sendCallEvent("trickle", null, event.candidate);
-
-        /* socket.send(JSON.stringify(iceCand)); */
       } else {
-        /* let iceCandEnd = {
-          type: "trickle_end",
-          caller_session_id: callerSessionId,
-          caller_handle_id: callerHandleId
-        }; */
 
         factory.call.sendCallEvent("trickle_end", null, null);
-
-        /* socket.send(JSON.stringify(iceCandEnd)); */
       }
     } catch (e) { }
     console.log(
@@ -535,12 +378,6 @@ export function UILoaded() {
 
   function onAddIceCandidateSuccess(pc) {
     console.log(`${getName(pc)} addIceCandidate success`);
-  }
-
-  function onAddIceCandidateError(pc, error) {
-    console.log(
-      `${getName(pc)} failed to add ICE Candidate: ${error.toString()}`
-    );
   }
 
   function onIceStateChange(pc, event) {
