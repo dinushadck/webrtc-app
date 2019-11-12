@@ -66,19 +66,27 @@ export function UILoaded() {
 
   let factory = null;
 
-  let evtOb = {};
-  evtOb["init"] = oninit;
-  evtOb["call_answered"] = onAnswer;
-  evtOb["incoming_call"] = onIncomingCall;
-  evtOb["on_ice"] = onIce;
-  evtOb["success"] = onSuccess;
-  evtOb["on_init"] = onInit;
+  let callEvtOb = {
+    init_result: onInit,
+    call_answered: onAnswer,
+    incoming_call: onIncomingCall,
+    on_ice: onIce
+  };
+
+  let socketEvtOb = {
+    success: onSuccess,
+    open: () => {/*on socket open*/ },
+    connect_error: () => {/*on socket connect_error*/ },
+    connect_timeout: () => {/*on socket connect_timeout*/ },
+    reconnect: () => {/*on socket reconnect*/ }
+  }
 
   async function createSocket() {
-    factory = new ChannelFactory(token.value, "192.168.1.8:3000", evtOb, {}, {});
+    factory = new ChannelFactory(token.value, "192.168.1.8:3000", callEvtOb, {}, socketEvtOb);
   }
 
   async function onSuccess(event) {
+    //if socket connection is successfull
     startButton.disabled = false;
     createSessionButton.disabled = false;
   }
@@ -390,10 +398,18 @@ export function UILoaded() {
   function hangup() {
     console.log("Ending call");
     pc.close();
-    pc.close();
     pc = null;
-    pc = null;
-    hangupButton.disabled = true;
-    callButton.disabled = false;
+
+    let user = {
+      from: {
+        id: caller.value,
+        name: caller.value
+      },
+      to: {
+        id: callee.value,
+        name: callee.value
+      }
+    };
+    factory.call.sendCallEvent("hangup", user, null);
   }
 }

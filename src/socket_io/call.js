@@ -36,6 +36,13 @@ export class Call {
                         }
                         break;
                     }
+                    case "hangup": {
+                        if (this._eventHandlers["hangup"]) {
+                            this._sid = jsonObj.session_id;
+                            this._eventHandlers["hangup"](jsonObj);
+                        }
+                        break;
+                    }
                     case "on_ice": {
                         if (this._eventHandlers["on_ice"]) {
                             this._eventHandlers["on_ice"](jsonObj);
@@ -64,12 +71,15 @@ export class Call {
             sessionEvent.to = data.to;
         }
 
-        if (!(event === "init" || event === "offer" || event === "accept" || event === "answer" || event === "trickle" || event === "trickle_end")) {
+        if (!(event === "init" || event === "offer" || event === "accept" || event === "answer" || event === "trickle" || event === "trickle_end" || event === "hangup")) {
             return new Error("Unsupported Event Type");
         }
         this._socket.emit("call", sessionEvent, ackData => {
             if (event === "init" && ackData && ackData.session_id) {
                 this._sid = ackData.session_id;
+                if (this._eventHandlers["init_result"]) {
+                    this._eventHandlers["init_result"](ackData);
+                }
             }
         });
         return sessionEvent;
