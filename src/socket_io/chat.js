@@ -3,21 +3,26 @@ export class Chat {
     constructor(socket, eventHandlers) {
         this._socket = socket;
         this.replyMap = {};
+        this._eventHandlers = eventHandlers;
 
         this._socket.on("chat", message => {
-            if (eventHandlers["chat_received"]) {
+            if (this._eventHandlers["chat_received"]) {
                 if (message.from && message.from.id) {
                     this.replyMap[message.from.id] = message.replyId;
                 }
-                eventHandlers["chat_received"](message);
+                this._eventHandlers["chat_received"](message);
             }
         });
 
         this._socket.on("chat status", message => {
-            if (eventHandlers["chat_status_received"]) {
-                eventHandlers["chat_status_received"](message);
+            if (this._eventHandlers["chat_status_received"]) {
+                this._eventHandlers["chat_status_received"](message);
             }
         });
+    }
+
+    setEventHandlers(evtHandlers) {
+        this._eventHandlers = evtHandlers;
     }
 
     sendMessage(type, data, content) {
@@ -40,8 +45,8 @@ export class Chat {
             return { Exception: new Error("Unsupported event type"), IsSuccess: true, Result: messageEvent };
         }
         this._socket.emit("chat", messageEvent, ackData => {
-            if (ackData && ackData.reply_id) {
-                this.replayMap[data.to.id] = ackData.reply_id;
+            if (ackData && ackData.replyId) {
+                this.replyMap[data.to.id] = ackData.replyId;
             }
         });
         return messageEvent;
