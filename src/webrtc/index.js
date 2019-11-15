@@ -47,13 +47,9 @@ export function UILoaded() {
 
   startButton.addEventListener("click", start);
   callButton.addEventListener("click", call);
-  customVideoButton.addEventListener("click", addCustomVideo);
   hangupButton.addEventListener("click", hangup);
   createSessionButton.addEventListener("click", createSession);
-  createSessionSIPButton.addEventListener("click", createSessionSIP);
   callAudioButton.addEventListener("click", callAudio);
-  upgradeButton.addEventListener("click", upgradeToVideo);
-  startUpgradeButton.addEventListener("click", startUpgrade);
   createSocketButton.addEventListener("click", createSocket);
 
   let localStream;
@@ -330,11 +326,11 @@ export function UILoaded() {
   }
 
   function onSetLocalSuccess(pc) {
-    console.log(`${getName(pc)} setLocalDescription complete`);
+    console.log(`setLocalDescription complete`);
   }
 
   function onSetRemoteSuccess(pc) {
-    console.log(`${getName(pc)} setRemoteDescription complete`);
+    console.log(`setRemoteDescription complete`);
   }
 
   function onSetSessionDescriptionError(error) {
@@ -347,10 +343,10 @@ export function UILoaded() {
       console.log("pc received remote stream");
     }
     if (e.streams.length > 1) {
-      if (receiveVideo.srcObject !== e.streams[1]) {
+      /* if (receiveVideo.srcObject !== e.streams[1]) {
         receiveVideo.srcObject = e.streams[1];
         console.log("pc received remote stream");
-      }
+      } */
     }
   }
 
@@ -378,19 +374,19 @@ export function UILoaded() {
       }
     } catch (e) { }
     console.log(
-      `${getName(pc)} ICE candidate:\n${
+      `ICE candidate:\n${
       event.candidate ? event.candidate.candidate : "(null)"
       }`
     );
   }
 
   function onAddIceCandidateSuccess(pc) {
-    console.log(`${getName(pc)} addIceCandidate success`);
+    console.log(` addIceCandidate success`);
   }
 
   function onIceStateChange(pc, event) {
     if (pc) {
-      console.log(`${getName(pc)} ICE state: ${pc.iceConnectionState}`);
+      console.log(`ICE state: ${pc.iceConnectionState}`);
       console.log("ICE state change event: ", event);
     }
   }
