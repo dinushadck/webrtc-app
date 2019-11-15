@@ -1,4 +1,4 @@
-import { ChannelFactory } from "../socket_io";
+import { ChannelFactory, Initialize } from "../socket_io";
 export function UILoaded() {
   const startButton = document.getElementById("startButton");
   const callButton = document.getElementById("callButton");
@@ -78,7 +78,8 @@ export function UILoaded() {
   }
 
   async function createSocket() {
-    factory = new ChannelFactory(token.value, "192.168.1.8:3000", callEvtOb, {}, socketEvtOb);
+    Initialize(token.value, "192.168.1.9:3000", callEvtOb, {}, socketEvtOb);
+    //factory = new ChannelFactory();
   }
 
   async function onSuccess(event) {
@@ -221,7 +222,7 @@ export function UILoaded() {
       }
     };
 
-    factory.call.sendCallEvent("init", user, null);
+    ChannelFactory.call.sendCallEvent("init", user, null);
   }
 
   async function start() {
@@ -309,7 +310,7 @@ export function UILoaded() {
       }
     };
 
-    factory.call.sendCallEvent("offer", user, sdp);
+    ChannelFactory.call.sendCallEvent("offer", user, sdp);
   }
 
   async function onCreateOfferSuccess(desc) {
@@ -356,7 +357,7 @@ export function UILoaded() {
     try {
       await pc.setLocalDescription(desc);
 
-      factory.call.sendCallEvent("accept", null, desc.sdp);
+      ChannelFactory.call.sendCallEvent("accept", null, desc.sdp);
       onSetLocalSuccess(pc);
     } catch (e) {
       onSetSessionDescriptionError(e);
@@ -367,10 +368,10 @@ export function UILoaded() {
     try {
       if (event.candidate) {
 
-        factory.call.sendCallEvent("trickle", null, event.candidate);
+        ChannelFactory.call.sendCallEvent("trickle", null, event.candidate);
       } else {
 
-        factory.call.sendCallEvent("trickle_end", null, null);
+        ChannelFactory.call.sendCallEvent("trickle_end", null, null);
       }
     } catch (e) { }
     console.log(
@@ -406,6 +407,6 @@ export function UILoaded() {
         name: callee.value
       }
     };
-    factory.call.sendCallEvent("hangup", user, null);
+    ChannelFactory.call.sendCallEvent("hangup", user, null);
   }
 }
